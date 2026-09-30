@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ph13 Server Browser</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --bg: #0d0d17;
+        --panel: #16162a;
+        --panel-2: #1c1c33;
+        --border: #2a2a45;
+        --text: #e0e0e0;
+        --muted: #8a8aa0;
+        --accent: #00d4ff;
+        --accent-2: #7c3aed;
+        --green: #4ade80;
+        --yellow: #fbbf24;
+        --red: #f87171;
+        --gold: #ffcc00;
+        --boost: #ff7b00;
+    }
+
+    body {
+        font-family: Tahoma, 'Segoe UI', sans-serif;
+        background: radial-gradient(circle at top, #1a1a2e 0%, #0d0d17 60%);
+        color: var(--text);
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    .container { max-width: 1400px; margin: 0 auto; }
+
+    /* ---------- Header ---------- */
+    header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    header h1 {
+        font-size: 1.6rem;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .stats {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .stat {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .stat b { color: var(--accent); font-size: 1.1rem; }
+    .stat span { color: var(--muted); font-size: 0.7rem; }
+    .stat.boost-stat b { color: var(--boost); }
+
+    /* ---------- Tabs ---------- */
+    .tabs {
+        display: flex;
+        gap: 6px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 5px;
+        margin-bottom: 16px;
+        width: fit-content;
+    }
+    .tab {
+        padding: 9px 18px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-family: inherit;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .tab:hover { color: var(--text); }
+    .tab.active {
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        color: #0d0d17;
+    }
+
+    /* ---------- Controls ---------- */
+    .controls {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 20px;
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        gap: 10px;
+    }
+    @media (max-width: 900px) {
+        .controls { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 500px) {
+        .controls { grid-template-columns: 1fr; }
+    }
+
+    input, select, button {
+        padding: 10px 12px;
+        border-radius: 9px;
+        border: 1px solid var(--border);
+        background: var(--panel-2);
+        color: var(--text);
+        font-size: 0.9rem;
+        font-family: inherit;
+        transition: border 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.15);
+    }
+    select { cursor: pointer; }
+    option { background: var(--panel-2); }
+
+    /* ---------- Server Grid ---------- */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 14px;
+    }
+
+    .card {
+        background: linear-gradient(145deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        cursor: pointer;
+        transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .card::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0; left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .card:hover {
+        transform: translateY(-3px);
+        border-color: var(--accent);
+        box-shadow: 0 8px 24px rgba(0,212,255,0.15);
+    }
+    .card:hover::before { opacity: 1; }
+
+    .card.boosted { border-color: rgba(255,123,0,0.5); }
+    .card.boosted::before {
+        background: linear-gradient(90deg, var(--boost), #ffcc00);
+        opacity: 1;
+    }
+
+    .card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+    .card-title {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #fff;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+    .badge {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .badge.boost {
+        background: linear-gradient(90deg, var(--boost), #ffcc00);
+        color: #000;
+    }
+    .badge.live { background: var(--green); color: #000; }
+    .badge.empty { background: #444; color: #bbb; }
+
+    .card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+        font-size: 0.75rem;
+        color: var(--muted);
+    }
+    .tag {
+        background: rgba(0,212,255,0.1);
+        color: var(--accent);
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+    }
+    .tag.gametype { background: rgba(124,58,237,0.15); color: #b794ff; }
+
+    .players-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .players-count {
+        font-size: 0.85rem;
+        color: var(--text);
+        min-width: 90px;
+    }
+    .players-count b { color: var(--green); font-size: 1rem; }
+    .players-count.full b { color: var(--red); }
+
+    .progress {
+        flex: 1;
+        height: 6px;
+        background: #2a2a45;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--green), var(--accent));
+        border-radius: 3px;
+        transition: width 0.4s;
+    }
+    .progress-fill.full { background: linear-gradient(90deg, var(--yellow), var(--red)); }
+
+    .card-id {
+        font-size: 0.7rem;
+        color: var(--muted);
+        font-family: monospace;
+        margin-top: 8px;
+    }
+
+    /* ---------- Loading / Empty ---------- */
+    .loader-box {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--muted);
+    }
+    .spinner {
+        width: 42px; height: 42px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        margin: 0 auto 15px;
+    }
+    .spinner-sm {
+        display: inline-block;
+        width: 14px; height: 14px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        vertical-align: middle;
+        margin-left: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-box {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--muted);
+        background: var(--panel);
+        border-radius: 14px;
+        border: 1px dashed var(--border);
+    }
+    .empty-box .emoji { font-size: 3rem; margin-bottom: 10px; }
+
+    /* ---------- Player Search View ---------- */
+    .player-search {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 18px;
+    }
+    .player-search-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+        .player-search-row { grid-template-columns: 1fr; }
+    }
+    .search-btn {
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        color: #0d0d17;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 9px;
+        transition: filter 0.2s;
+    }
+    .search-btn:hover { filter: brightness(1.15); }
+    .search-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        filter: none;
+    }
+    .clear-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        cursor: pointer;
+        padding: 10px 16px;
+        border-radius: 9px;
+        transition: all 0.2s;
+    }
+    .clear-btn:hover { color: var(--text); border-color: var(--accent); }
+
+    .search-hint {
+        font-size: 0.78rem;
+        color: var(--muted);
+        line-height: 1.7;
+    }
+    .search-hint code {
+        background: var(--panel-2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+        color: var(--accent);
+        font-size: 0.72rem;
+    }
+
+    .scan-status {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 16px;
+        font-size: 0.85rem;
+    }
+    .scan-progress {
+        flex: 1;
+        height: 8px;
+        background: var(--border);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+    .scan-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent), var(--accent-2));
+        border-radius: 4px;
+        transition: width 0.2s;
+    }
+
+    .scan-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    .scan-summary .pill {
+        padding: 6px 12px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+    .scan-summary .pill b { color: var(--accent); }
+
+    /* ---------- Player Result Cards ---------- */
+    .player-results {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .result-card {
+        background: linear-gradient(145deg, var(--panel), var(--panel-2));
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        transition: border-color 0.2s;
+    }
+    .result-card:hover { border-color: var(--accent); }
+
+    .result-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    .result-player {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .result-player .pname {
+        font-weight: bold;
+        font-size: 1rem;
+        color: #fff;
+    }
+    .result-player .pid {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-family: monospace;
+    }
+    .result-player .pping {
+        font-size: 0.8rem;
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background: var(--panel-2);
+    }
+    .pping.low { color: var(--green); }
+    .pping.mid { color: var(--yellow); }
+    .pping.high { color: var(--red); }
+
+    .result-server {
+        font-size: 0.8rem;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 5px 10px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 100%;
+    }
+    .result-server:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+    .result-server .server-name {
+        color: var(--text);
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 320px;
+    }
+    .result-server:hover .server-name { color: var(--accent); }
+
+    .result-ids {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .id-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        font-family: monospace;
+        cursor: pointer;
+        transition: all 0.15s;
+        border: 1px solid transparent;
+        user-select: none;
+        max-width: 100%;
+        word-break: break-all;
+    }
+    .id-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    }
+    .id-chip:active { transform: scale(0.97); }
+    .id-chip.copied {
+        background: var(--green) !important;
+        color: #000 !important;
+        border-color: var(--green) !important;
+    }
+
+    .id-chip.steam { background: rgba(30,100,200,0.15); color: #6cb6ff; border-color: rgba(30,100,200,0.3); }
+    .id-chip.license { background: rgba(124,58,237,0.15); color: #b794ff; border-color: rgba(124,58,237,0.3); }
+    .id-chip.vmp { background: rgba(74,222,128,0.15); color: var(--green); border-color: rgba(74,222,128,0.3); }
+    .id-chip.discord { background: rgba(88,101,242,0.15); color: #8b9aff; border-color: rgba(88,101,242,0.3); }
+    .id-chip.other { background: rgba(138,138,160,0.15); color: var(--muted); border-color: rgba(138,138,160,0.3); }
+
+    .id-chip .copy-icon { opacity: 0.6; font-size: 0.85rem; }
+    .id-chip:hover .copy-icon { opacity: 1; }
+
+    .id-chip mark {
+        background: var(--yellow);
+        color: #000;
+        padding: 0 2px;
+        border-radius: 3px;
+    }
+
+    .no-ids { color: var(--muted); font-size: 0.75rem; font-style: italic; }
+
+    /* ---------- Modal (Players) ---------- */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.75);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 20px;
+        animation: fadeIn 0.2s;
+    }
+    .modal-overlay.open { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .modal {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        width: 100%;
+        max-width: 800px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: slideUp 0.25s;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-head {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+    }
+    .modal-head h2 {
+        font-size: 1.1rem;
+        word-break: break-word;
+    }
+    .modal-head .sub {
+        font-size: 0.8rem;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+    .close-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        width: 36px; height: 36px;
+        border-radius: 50%;
+        font-size: 1.2rem;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: all 0.2s;
+    }
+    .close-btn:hover { background: var(--red); border-color: var(--red); color: #fff; }
+
+    .modal-body {
+        padding: 10px 20px 20px;
+        overflow-y: auto;
+    }
+
+    .player-row {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.15s;
+    }
+    .player-row:hover { background: rgba(0,212,255,0.04); }
+    .player-row.expanded { background: rgba(0,212,255,0.08); }
+
+    .player-main {
+        display: grid;
+        grid-template-columns: 40px 1fr 60px 80px 30px;
+        align-items: center;
+        padding: 11px 8px;
+        cursor: pointer;
+        gap: 10px;
+    }
+    .player-main .idx { color: var(--muted); font-size: 0.85rem; }
+    .player-main .pname { font-weight: bold; word-break: break-word; }
+    .player-main .pid { color: var(--muted); font-size: 0.8rem; font-family: monospace; }
+    .player-main .pping { font-weight: bold; font-size: 0.85rem; }
+    .player-main .expander {
+        color: var(--muted);
+        font-size: 0.8rem;
+        transition: transform 0.2s;
+        text-align: center;
+    }
+    .player-row.expanded .expander { transform: rotate(180deg); color: var(--accent); }
+
+    .player-ids {
+        display: none;
+        padding: 0 8px 14px 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .player-row.expanded .player-ids { display: flex; }
+
+    .modal-loading, .modal-empty {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--muted);
+    }
+
+    /* ---------- Toast ---------- */
+    .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: var(--green);
+        color: #000;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 0.9rem;
+        z-index: 200;
+        opacity: 0;
+        transition: all 0.3s;
+        pointer-events: none;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        max-width: 90vw;
+        word-break: break-all;
+    }
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    .toast.error { background: var(--red); color: #fff; }
+
+    /* ---------- Scrollbar ---------- */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--panel-2); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.75rem;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+    }
+    footer b { color: var(--accent); }
+
+    .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+    <header>
+        <h1>⚡ Ph13 Server Browser</h1>
+        <div class="stats">
+            <div class="stat"><b id="statTotal">-</b><span>کل سرورها</span></div>
+            <div class="stat"><b id="statOnline">-</b><span>سرور فعال</span></div>
+            <div class="stat"><b id="statPlayers">-</b><span>پلیر آنلاین</span></div>
+            <div class="stat boost-stat"><b id="statBoosted">-</b><span>سرور بوست‌شده</span></div>
+        </div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab active" data-tab="servers">🖥️ سرورها</button>
+        <button class="tab" data-tab="players">🔍 جستجوی پلیر</button>
+    </div>
+
+    <!-- ============ VIEW: SERVERS ============ -->
+    <div id="view-servers">
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="🔍 جستجو در نام، آیدی یا توضیحات..." />
+            <select id="gametypeFilter"><option value="">همه گیم‌تایپ‌ها</option></select>
+            <select id="localeFilter"><option value="">همه زبان‌ها</option></select>
+            <select id="sortSelect">
+                <option value="players_desc">بیشترین پلیر</option>
+                <option value="players_asc">کمترین پلیر</option>
+                <option value="max_desc">بیشترین ظرفیت</option>
+                <option value="name_asc">نام (الفبا)</option>
+                <option value="boost_desc">بیشترین بوست</option>
+            </select>
+            <select id="boostFilter">
+                <option value="">همه سرورها</option>
+                <option value="boosted">فقط بوست‌شده</option>
+                <option value="nonboosted">فقط بدون بوست</option>
+                <option value="online">فقط فعال (پلیر دارد)</option>
+            </select>
+        </div>
+
+        <div id="resultInfo" style="color:var(--muted); font-size:0.85rem; margin-bottom:14px;"></div>
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <!-- ============ VIEW: PLAYERS ============ -->
+    <div id="view-players" class="hidden">
+        <div class="player-search">
+            <div class="player-search-row">
+                <input type="text" id="playerSearchInput" placeholder="🔍 نام پلیر یا شناسه (steam hex / license / vmp / discord)..." />
+                <button class="search-btn" id="playerSearchBtn">🚀 اسکن و جستجو</button>
+                <button class="clear-btn" id="playerClearBtn">پاک کردن</button>
+            </div>
+            <div class="search-hint">
+                💡 می‌تونی اسم پلیر رو تایپ کنی، یا شناسه‌ها رو به این شکل‌ها جستجو کنی:
+                <code>11000012e723206</code>
+                <code>steam:11000012e723206</code>
+                <code>153122397479003148</code>
+                <code>vmp:46933</code>
+                <code>46933</code>
+                <br>
+                🔎 جستجو روی سرورهای <b>فعال</b> (دارای پلیر) انجام می‌شه. برای کاهش بار، از سرورهای خالی صرف‌نظر می‌شه.
+            </div>
+        </div>
+
+        <div id="scanStatus" class="hidden">
+            <div class="scan-status">
+                <span id="scanStatusText">در حال اسکن...</span>
+                <div class="scan-progress">
+                    <div class="scan-progress-fill" id="scanProgressFill" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="scanSummary" class="scan-summary hidden"></div>
+        <div id="playerResults" class="player-results"></div>
+    </div>
+
+    <footer>ساخته‌شده با ❤️ برای <b>Ph13</b> — داده‌ها از api.vmp.ir</footer>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <div class="modal-head">
+            <div>
+                <h2 id="modalTitle">در حال بارگذاری...</h2>
+                <div class="sub" id="modalSub"></div>
+            </div>
+            <button class="close-btn" id="closeModal">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <div class="modal-loading"><div class="spinner"></div>در حال دریافت پلیرها...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✅ کپی شد!</div>
+
+<script>
+// ==================== API ====================
+const LIST_API = "https://api.vmp.ir/server/list/list.json";
+const PLAYERS_API = "https://api.vmp.ir/server/api.php?work=singleData2&id=";
+
+// ==================== State ====================
+let allServers = [];
+let filteredServers = [];
+const playerCache = new Map(); // serverId -> { players, fetchedAt }
+let isScanning = false;
+
+// ==================== DOM ====================
+const grid = document.getElementById("grid");
+const searchInput = document.getElementById("searchInput");
+const gametypeFilter = document.getElementById("gametypeFilter");
+const localeFilter = document.getElementById("localeFilter");
+const sortSelect = document.getElementById("sortSelect");
+const boostFilter = document.getElementById("boostFilter");
+const resultInfo = document.getElementById("resultInfo");
+const modal = document.getElementById("modal");
+const modalTitle = document.getElementById("modalTitle");
+const modalSub = document.getElementById("modalSub");
+const modalBody = document.getElementById("modalBody");
+const toastEl = document.getElementById("toast");
+
+// player search
+const playerSearchInput = document.getElementById("playerSearchInput");
+const playerSearchBtn = document.getElementById("playerSearchBtn");
+const playerClearBtn = document.getElementById("playerClearBtn");
+const scanStatus = document.getElementById("scanStatus");
+const scanStatusText = document.getElementById("scanStatusText");
+const scanProgressFill = document.getElementById("scanProgressFill");
+const scanSummary = document.getElementById("scanSummary");
+const playerResults = document.getElementById("playerResults");
+
+// ==================== Helpers ====================
+function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+}
+
+function formatNumber(n) {
+    return Number(n || 0).toLocaleString("en-US");
+}
+
+function pingClass(p) {
+    if (p > 150) return "high";
+    if (p > 80) return "mid";
+    return "low";
+}
+
+function isBoosted(s) {
+    if ((s.upvotePower || 0) > 0) return true;
+    if (s.boosts && Object.keys(s.boosts).length > 0) return true;
+    return false;
+}
+
+function boostCount(s) {
+    if (s.upvotePower) return s.upvotePower;
+    if (s.boosts) {
+        return Object.values(s.boosts).reduce((sum, b) => sum + (b.count || 0), 0);
+    }
+    return 0;
+}
+
+// ==================== Toast ====================
+let toastTimer = null;
+function showToast(msg, isError = false) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle("error", isError);
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+
+// ==================== Clipboard ====================
+async function copyToClipboard(text, chipEl) {
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            document.body.removeChild(ta);
+        }
+        if (chipEl) {
+            const original = chipEl.innerHTML;
+            chipEl.classList.add("copied");
+            chipEl.innerHTML = '<span>✅ کپی شد!</span>';
+            setTimeout(() => {
+                chipEl.classList.remove("copied");
+                chipEl.innerHTML = original;
+            }, 1200);
+        }
+        showToast("✅ کپی شد: " + (text.length > 40 ? text.slice(0, 40) + "..." : text));
+    } catch (err) {
+        console.error(err);
+        showToast("❌ خطا در کپی", true);
+    }
+}
+
+// ==================== Color Code Parser ====================
+const VMP_COLORS = {
+    "0": "#000000", "1": "#ff1f1f", "2": "#3eff3e", "3": "#ffff3e",
+    "4": "#3e7aff", "5": "#3effff", "6": "#ff3eff", "7": "#ffffff",
+    "8": "#ff9f3e", "9": "#9f9f9f",
+};
+
+function parseColors(text) {
+    if (text == null) return "";
+    const str = String(text);
+    if (!/\^\d/.test(str)) return escapeHtml(str);
+
+    let html = "";
+    let currentColor = "#ffffff";
+    let buffer = "";
+
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === "^" && i + 1 < str.length && /\d/.test(str[i + 1])) {
+            if (buffer) {
+                html += `<span style="color:${currentColor}">${escapeHtml(buffer)}</span>`;
+                buffer = "";
+            }
+            currentColor = VMP_COLORS[str[i + 1]] || "#ffffff";
+            i++;
+        } else {
+            buffer += ch;
+        }
+    }
+    if (buffer) html += `<span style="color:${currentColor}">${escapeHtml(buffer)}</span>`;
+    return html || escapeHtml(str);
+}
+
+function stripColors(text) {
+    if (text == null) return "";
+    return String(text).replace(/\^\d/g, "");
+}
+
+/** هایلایت کردن بخش منطبق در متن */
+function highlight(text, query) {
+    const safe = escapeHtml(text);
+    if (!query) return safe;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`(${escaped})`, "gi");
+    return safe.replace(re, "<mark>$1</mark>");
+}
+
+// ==================== Load ====================
+async function loadServers() {
+    grid.innerHTML = '<div class="loader-box" style="grid-column:1/-1;"><div class="spinner"></div>در حال بارگذاری لیست سرورها...</div>';
+    resultInfo.textContent = "";
+
+    try {
+        const res = await fetch(LIST_API);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const raw = await res.json();
+        allServers = Array.isArray(raw) ? raw : (raw.Data || raw.servers || []);
+
+        buildFilters();
+        applyFilters();
+        updateStats();
+    } catch (err) {
+        console.error(err);
+        grid.innerHTML = `<div class="empty-box" style="grid-column:1/-1;">
+            <div class="emoji">❌</div>
+            <div>خطا در بارگذاری: ${escapeHtml(err.message)}</div>
+            <div style="margin-top:10px; font-size:0.8rem;">اگه خطای CORS گرفتی، از پروکسی استفاده کن یا با Live Server اجرا کن.</div>
+        </div>`;
+    }
+}
+
+// ==================== Filters ====================
+function buildFilters() {
+    const gametypes = new Set();
+    const locales = new Set();
+    allServers.forEach(s => {
+        if (s.gametype) gametypes.add(s.gametype);
+        const loc = s.vars?.locale;
+        if (loc) locales.add(loc);
+    });
+    [...gametypes].sort().forEach(g => {
+        const o = document.createElement("option");
+        o.value = g; o.textContent = g;
+        gametypeFilter.appendChild(o);
+    });
+    [...locales].sort().forEach(l => {
+        const o = document.createElement("option");
+        o.value = l; o.textContent = l;
+        localeFilter.appendChild(o);
+    });
+}
+
+function applyFilters() {
+    const q = searchInput.value.trim().toLowerCase();
+    const gt = gametypeFilter.value;
+    const loc = localeFilter.value;
+    const bf = boostFilter.value;
+    const sort = sortSelect.value;
+
+    filteredServers = allServers.filter(s => {
+        if (q) {
+            const hay = stripColors([
+                s.hostname, s.id, s.gametype,
+                s.vars?.sv_projectName, s.vars?.sv_projectDesc,
+                s.vars?.tags, s.mapname
+            ].join(" ")).toLowerCase();
+            if (!hay.includes(q)) return false;
+        }
+        if (gt && s.gametype !== gt) return false;
+        if (loc && s.vars?.locale !== loc) return false;
+
+        const boosted = isBoosted(s);
+        if (bf === "boosted" && !boosted) return false;
+        if (bf === "nonboosted" && boosted) return false;
+        if (bf === "online" && (s.clients || 0) === 0) return false;
+        return true;
+    });
+
+    const sorters = {
+        players_desc: (a, b) => (b.clients || 0) - (a.clients || 0),
+        players_asc: (a, b) => (a.clients || 0) - (b.clients || 0),
+        max_desc: (a, b) => (b.svMaxclients || 0) - (a.svMaxclients || 0),
+        name_asc: (a, b) => stripColors(a.hostname || "").localeCompare(stripColors(b.hostname || ""), "fa"),
+        boost_desc: (a, b) => boostCount(b) - boostCount(a)
+    };
+    filteredServers.sort(sorters[sort] || sorters.players_desc);
+
+    renderGrid();
+}
+
+// ==================== Render Grid ====================
+function renderGrid() {
+    resultInfo.textContent = `نمایش ${filteredServers.length} سرور از ${allServers.length}`;
+
+    if (filteredServers.length === 0) {
+        grid.innerHTML = `<div class="empty-box" style="grid-column:1/-1;">
+            <div class="emoji">🔍</div>
+            <div>سروری با این مشخصات پیدا نشد.</div>
+        </div>`;
+        return;
+    }
+
+    grid.innerHTML = filteredServers.map(s => renderCard(s)).join("");
+    grid.querySelectorAll(".card").forEach(el => {
+        el.addEventListener("click", () => openServer(el.dataset.id));
+    });
+}
+
+function renderCard(s) {
+    const players = s.clients || 0;
+    const max = s.svMaxclients || 0;
+    const pct = max > 0 ? Math.min(100, (players / max) * 100) : 0;
+    const isFull = max > 0 && players >= max;
+    const boosted = isBoosted(s);
+    const bCount = boostCount(s);
+    const name = s.hostname?.trim() || s.vars?.sv_projectName || "بدون نام";
+    const nameHtml = parseColors(name);
+    const tags = (s.vars?.tags || "").split(",").map(t => t.trim()).filter(Boolean).slice(0, 3);
+    const gt = s.gametype || "—";
+    const locale = s.vars?.locale || "";
+
+    return `
+    <div class="card ${boosted ? "boosted" : ""}" data-id="${escapeHtml(s.id)}">
+        <div class="card-head">
+            <div class="card-title">${nameHtml}</div>
+            ${boosted ? `<span class="badge boost">🚀 ${bCount} بوست</span>` :
+              players > 0 ? '<span class="badge live">● فعال</span>' :
+              '<span class="badge empty">خالی</span>'}
+        </div>
+
+        <div class="card-meta">
+            <span class="tag gametype">${escapeHtml(gt)}</span>
+            ${locale ? `<span class="tag">${escapeHtml(locale)}</span>` : ""}
+            ${tags.map(t => `<span class="tag">${escapeHtml(t)}</span>`).join("")}
+        </div>
+
+        <div class="players-bar">
+            <div class="players-count ${isFull ? "full" : ""}">
+                <b>${formatNumber(players)}</b> / ${formatNumber(max)}
+            </div>
+            <div class="progress">
+                <div class="progress-fill ${isFull ? "full" : ""}" style="width:${pct}%"></div>
+            </div>
+        </div>
+
+        <div class="card-id">🆔 ${escapeHtml(s.id)}${boosted ? ` &nbsp;·&nbsp; 🚀 ${bCount}` : ""}</div>
+    </div>`;
+}
+
+// ==================== Stats ====================
+function updateStats() {
+    const total = allServers.length;
+    const online = allServers.filter(s => (s.clients || 0) > 0).length;
+    const players = allServers.reduce((sum, s) => sum + (s.clients || 0), 0);
+    const boosted = allServers.filter(s => isBoosted(s)).length;
+
+    document.getElementById("statTotal").textContent = formatNumber(total);
+    document.getElementById("statOnline").textContent = formatNumber(online);
+    document.getElementById("statPlayers").textContent = formatNumber(players);
+    document.getElementById("statBoosted").textContent = formatNumber(boosted);
+}
+
+// ==================== Identifier Helpers ====================
+function getIdType(id) {
+    if (!id) return "other";
+    if (id.startsWith("steam:")) return "steam";
+    if (id.startsWith("license:")) return "license";
+    if (id.startsWith("vmp:")) return "vmp";
+    if (id.startsWith("discord:")) return "discord";
+    return "other";
+}
+
+function getIdIcon(type) {
+    return {
+        steam: "🎮", license: "🔑", vmp: "🟢", discord: "💬", other: "🔖"
+    }[type] || "🔖";
+}
+
+// ==================== Modal / Players ====================
+async function fetchServerData(serverId) {
+    // اگه کش معتبر داریم (کمتر از 60 ثانیه)، ازش استفاده کن
+    const cached = playerCache.get(serverId);
+    if (cached && Date.now() - cached.fetchedAt < 60_000) {
+        return cached.data;
+    }
+
+    const res = await fetch(PLAYERS_API + encodeURIComponent(serverId));
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+    const data = json.Data || {};
+    playerCache.set(serverId, { data, fetchedAt: Date.now() });
+    return data;
+}
+
+async function openServer(serverId) {
+    const s = allServers.find(x => x.id === serverId);
+    modal.classList.add("open");
+    modalTitle.innerHTML = parseColors(s?.hostname || serverId);
+    modalSub.textContent = "در حال دریافت لیست پلیرها...";
+    modalBody.innerHTML = '<div class="modal-loading"><div class="spinner"></div>لطفاً صبر کنید...</div>';
+
+    try {
+        const data = await fetchServerData(serverId);
+        const players = data.players || [];
+
+        modalTitle.innerHTML = parseColors(data.hostname || s?.hostname || serverId);
+        modalSub.innerHTML = `
+            👥 ${data.clients || 0} / ${data.sv_maxclients || "?"} پلیر
+            &nbsp;·&nbsp; 🎮 ${escapeHtml(data.gametype || "-")}
+            &nbsp;·&nbsp; 🌐 ${escapeHtml(data.mapname || "-")}
+        `;
+
+        if (players.length === 0) {
+            modalBody.innerHTML = '<div class="modal-empty">⚠️ هیچ پلیری آنلاین نیست.</div>';
+            return;
+        }
+
+        players.sort((a, b) => (a.id || 0) - (b.id || 0));
+        modalBody.innerHTML = players.map((p, i) => renderPlayerRow(p, i)).join("");
+
+        attachPlayerEvents();
+    } catch (err) {
+        console.error(err);
+        modalBody.innerHTML = `<div class="modal-empty">❌ خطا: ${escapeHtml(err.message)}</div>`;
+    }
+}
+
+function renderPlayerRow(p, i) {
+    const ids = p.identifiers || [];
+    const chipsHtml = ids.length === 0
+        ? '<span class="no-ids">بدون شناسه عمومی</span>'
+        : ids.map(id => {
+            const type = getIdType(id);
+            const icon = getIdIcon(type);
+            return `<span class="id-chip ${type}" data-value="${escapeHtml(id)}" title="کلیک برای کپی">
+                <span>${icon}</span>
+                <span>${escapeHtml(id)}</span>
+                <span class="copy-icon">📋</span>
+            </span>`;
+        }).join("");
+
+    return `
+        <div class="player-row">
+            <div class="player-main">
+                <span class="idx">${i + 1}</span>
+                <span class="pname">${parseColors(p.name || "نامشخص")}</span>
+                <span class="pid">#${p.id ?? "-"}</span>
+                <span class="pping ${pingClass(p.ping || 0)}">${p.ping ?? "-"}ms</span>
+                <span class="expander">▼</span>
+            </div>
+            <div class="player-ids">${chipsHtml}</div>
+        </div>
+    `;
+}
+
+function attachPlayerEvents() {
+    modalBody.querySelectorAll(".player-main").forEach(el => {
+        el.addEventListener("click", () => {
+            el.parentElement.classList.toggle("expanded");
+        });
+    });
+    modalBody.querySelectorAll(".id-chip").forEach(chip => {
+        chip.addEventListener("click", (e) => {
+            e.stopPropagation();
+            copyToClipboard(chip.dataset.value, chip);
+        });
+    });
+}
+
+function closeModal() {
+    modal.classList.remove("open");
+}
+
+// ==================== Player Search ====================
+/**
+ * نرمال‌سازی کوئری برای مقایسه با شناسه‌ها
+ * حذف پیشوندها: steam:, license:, vmp:, discord:
+ */
+function normalizeIdQuery(q) {
+    return q.toLowerCase()
+        .replace(/^(steam|license|vmp|discord):/i, "")
+        .trim();
+}
+
+/**
+ * بررسی آیا پلیر با کوئری جستجو منطبق است
+ */
+function playerMatches(player, rawQuery) {
+    const q = rawQuery.toLowerCase().trim();
+    if (!q) return false;
+
+    // 1) تطابق نام
+    const name = stripColors(player.name || "").toLowerCase();
+    if (name.includes(q)) return true;
+
+    // 2) تطابق آیدی
+    if (String(player.id) === q) return true;
+
+    // 3) تطابق شناسه‌ها (با نرمال‌سازی)
+    const idQuery = normalizeIdQuery(rawQuery);
+    if (!idQuery) return false;
+
+    const ids = player.identifiers || [];
+    for (const id of ids) {
+        const norm = id.toLowerCase().replace(/^(steam|license|vmp|discord):/i, "");
+        if (norm === idQuery) return true;        // تطابق کامل
+        if (norm.includes(idQuery)) return true;  // تطابق جزئی
+    }
+
+    return false;
+}
+
+/** تعیین نوع تطابق برای نمایش badge */
+function getMatchType(player, rawQuery) {
+    const q = rawQuery.toLowerCase().trim();
+    const name = stripColors(player.name || "").toLowerCase();
+    if (name.includes(q)) return "name";
+
+    const idQuery = normalizeIdQuery(rawQuery);
+    if (!idQuery) return "id";
+
+    const ids = player.identifiers || [];
+    for (const id of ids) {
+        const norm = id.toLowerCase().replace(/^(steam|license|vmp|discord):/i, "");
+        if (norm === idQuery) return "id-exact";
+        if (norm.includes(idQuery)) return "id-partial";
+    }
+    return "id";
+}
+
+async function startPlayerScan() {
+    if (isScanning) return;
+
+    const query = playerSearchInput.value.trim();
+    if (!query) {
+        showToast("❌ یه چیزی برای جستجو وارد کن", true);
+        return;
+    }
+
+    // سرورهای فعال (دارای پلیر)
+    const activeServers = allServers.filter(s => (s.clients || 0) > 0);
+    if (activeServers.length === 0) {
+        showToast("⚠️ هیچ سرور فعالی پیدا نشد", true);
+        return;
+    }
+
+    isScanning = true;
+    playerSearchBtn.disabled = true;
+    playerSearchBtn.innerHTML = 'در حال اسکن <span class="spinner-sm"></span>';
+    playerResults.innerHTML = "";
+    scanSummary.classList.add("hidden");
+    scanStatus.classList.remove("hidden");
+    scanProgressFill.style.width = "0%";
+
+    const results = [];
+    let scanned = 0;
+    const total = activeServers.length;
+
+    const updateProgress = () => {
+        const pct = Math.round((scanned / total) * 100);
+        scanProgressFill.style.width = pct + "%";
+        scanStatusText.textContent = `اسکن ${scanned} از ${total} سرور... (${pct}%)`;
+    };
+    updateProgress();
+
+    // اجرا با همزمانی محدود (4 تا همزمان)
+    const CONCURRENCY = 4;
+    const queue = [...activeServers];
+    const workers = [];
+
+    for (let w = 0; w < CONCURRENCY; w++) {
+        workers.push((async () => {
+            while (queue.length > 0) {
+                const server = queue.shift();
+                if (!server) break;
+                try {
+                    const data = await fetchServerData(server.id);
+                    const players = data.players || [];
+                    const serverName = data.hostname || server.hostname || server.id;
+
+                    for (const p of players) {
+                        if (playerMatches(p, query)) {
+                            results.push({
+                                player: p,
+                                server: {
+                                    id: server.id,
+                                    name: serverName,
+                                    clients: data.clients || 0,
+                                    max: data.sv_maxclients || server.svMaxclients || "?",
+                                    gametype: data.gametype || server.gametype || "-"
+                                },
+                                matchType: getMatchType(p, query)
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.warn("Scan fail:", server.id, err);
+                }
+                scanned++;
+                updateProgress();
+            }
+        })());
+    }
+
+    await Promise.all(workers);
+
+    isScanning = false;
+    playerSearchBtn.disabled = false;
+    playerSearchBtn.textContent = "🚀 اسکن و جستجو";
+    scanStatus.classList.add("hidden");
+
+    renderPlayerResults(results, query, total);
+}
+
+function renderPlayerResults(results, query, scannedCount) {
+    // آمار
+    scanSummary.classList.remove("hidden");
+    const exact = results.filter(r => r.matchType === "id-exact").length;
+    scanSummary.innerHTML = `
+        <div class="pill">🔎 نتایج: <b>${results.length}</b></div>
+        <div class="pill">🖥️ سرورهای اسکن‌شده: <b>${scannedCount}</b></div>
+        ${exact > 0 ? `<div class="pill">🎯 تطابق دقیق شناسه: <b>${exact}</b></div>` : ""}
+    `;
+
+    if (results.length === 0) {
+        playerResults.innerHTML = `<div class="empty-box">
+            <div class="emoji">🤷</div>
+            <div>هیچ پلیری با «${escapeHtml(query)}» پیدا نشد.</div>
+            <div style="margin-top:8px; font-size:0.8rem;">ممکنه پلیر آفلاین باشه یا توی سرورهای دیگه‌ای باشه که الان پلیر ندارن.</div>
+        </div>`;
+        return;
+    }
+
+    // مرتب‌سازی: تطابق دقیق شناسه اول، بعد اسم، بعد بقیه
+    const order = { "id-exact": 0, "name": 1, "id-partial": 2, "id": 3 };
+    results.sort((a, b) => {
+        const oa = order[a.matchType] ?? 9;
+        const ob = order[b.matchType] ?? 9;
+        if (oa !== ob) return oa - ob;
+        return (a.player.name || "").localeCompare(b.player.name || "", "fa");
+    });
+
+    playerResults.innerHTML = results.map(r => renderResultCard(r, query)).join("");
+
+    // events
+    playerResults.querySelectorAll(".id-chip").forEach(chip => {
+        chip.addEventListener("click", (e) => {
+            e.stopPropagation();
+            copyToClipboard(chip.dataset.value, chip);
+        });
+    });
+
+    playerResults.querySelectorAll(".result-server").forEach(el => {
+        el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openServer(el.dataset.serverId);
+        });
+    });
+}
+
+function renderResultCard(r, query) {
+    const p = r.player;
+    const s = r.server;
+    const ids = p.identifiers || [];
+
+    const matchBadge = {
+        "id-exact": '<span class="badge" style="background:var(--green);color:#000;">🎯 تطابق دقیق شناسه</span>',
+        "id-partial": '<span class="badge" style="background:var(--yellow);color:#000;">🔗 تطابق شناسه</span>',
+        "name": '<span class="badge" style="background:var(--accent);color:#000;">👤 تطابق نام</span>',
+        "id": '<span class="badge" style="background:var(--muted);color:#000;">ID</span>'
+    }[r.matchType] || "";
+
+    const chipsHtml = ids.length === 0
+        ? '<span class="no-ids">بدون شناسه عمومی</span>'
+        : ids.map(id => {
+            const type = getIdType(id);
+            const icon = getIdIcon(type);
+            const norm = id.replace(/^(steam|license|vmp|discord):/i, "");
+            const idQuery = normalizeIdQuery(query);
+            const isMatch = idQuery && (norm.toLowerCase() === idQuery || norm.toLowerCase().includes(idQuery));
+
+            // هایلایت بخش منطبق (روی خود ID با پیشوند)
+            let innerHtml;
+            if (isMatch && idQuery) {
+                const safeId = escapeHtml(id);
+                const escaped = idQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const re = new RegExp(`(${escaped})`, "gi");
+                innerHtml = safeId.replace(re, "<mark>$1</mark>");
+            } else {
+                innerHtml = escapeHtml(id);
+            }
+
+            return `<span class="id-chip ${type}" data-value="${escapeHtml(id)}" title="کلیک برای کپی">
+                <span>${icon}</span>
+                <span>${innerHtml}</span>
+                <span class="copy-icon">📋</span>
+            </span>`;
+        }).join("");
+
+    return `
+        <div class="result-card">
+            <div class="result-head">
+                <div class="result-player">
+                    <span class="pname">${highlight(stripColors(p.name || "نامشخص"), query)}</span>
+                    <span class="pid">#${p.id ?? "-"}</span>
+                    <span class="pping ${pingClass(p.ping || 0)}">${p.ping ?? "-"}ms</span>
+                    ${matchBadge}
+                </div>
+                <div class="result-server" data-server-id="${escapeHtml(s.id)}" title="کلیک برای دیدن همه پلیرهای این سرور">
+                    🖥️ <span class="server-name">${parseColors(s.name)}</span>
+                    <span style="color:var(--muted);font-size:0.75rem;">(${s.clients}/${s.max})</span>
+                </div>
+            </div>
+            <div class="result-ids">${chipsHtml}</div>
+        </div>
+    `;
+}
+
+function clearPlayerSearch() {
+    playerSearchInput.value = "";
+    playerResults.innerHTML = "";
+    scanSummary.classList.add("hidden");
+    scanStatus.classList.add("hidden");
+    scanProgressFill.style.width = "0%";
+}
+
+// ==================== Tabs ====================
+function switchTab(tabName) {
+    document.querySelectorAll(".tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.tab === tabName);
+    });
+    document.getElementById("view-servers").classList.toggle("hidden", tabName !== "servers");
+    document.getElementById("view-players").classList.toggle("hidden", tabName !== "players");
+}
+
+// ==================== Events ====================
+searchInput.addEventListener("input", applyFilters);
+gametypeFilter.addEventListener("change", applyFilters);
+localeFilter.addEventListener("change", applyFilters);
+sortSelect.addEventListener("change", applyFilters);
+boostFilter.addEventListener("change", applyFilters);
+
+document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => switchTab(t.dataset.tab));
+});
+
+playerSearchBtn.addEventListener("click", startPlayerScan);
+playerClearBtn.addEventListener("click", clearPlayerSearch);
+playerSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") startPlayerScan();
+});
+
+document.getElementById("closeModal").addEventListener("click", closeModal);
+modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+// ==================== Init ====================
+loadServers();
+</script>
+</body>
+</html>

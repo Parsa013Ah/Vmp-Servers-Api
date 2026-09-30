@@ -1,0 +1,18 @@
+0 verbose cli D:\Other\Node Js\node.exe D:\Other\Node Js\node_modules\npm\bin\npm-cli.js
+1 info using npm@10.9.4
+2 info using node@v22.21.0
+3 silly config load:file:D:\Other\Node Js\node_modules\npm\npmrc
+4 silly config load:file:d:\Git\VmpeServerScannerApi\.npmrc
+5 silly config load:file:C:\Users\ParsaAh\.npmrc
+6 silly config load:file:D:\Other\npm-global\etc\npmrc
+7 verbose title npm config get prefix
+8 verbose argv "config" "get" "prefix"
+9 verbose logfile logs-max:10 dir:D:\Git\VmpeServerScannerApi\npm-cache\_logs\2026-09-30T07_43_01_881Z-
+10 verbose logfile D:\Git\VmpeServerScannerApi\npm-cache\_logs\2026-09-30T07_43_01_881Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose cwd d:\Git\VmpeServerScannerApi
+13 verbose os Windows_NT 10.0.26200
+14 verbose node v22.21.0
+15 verbose npm  v10.9.4
+16 verbose exit 0
+17 info ok
